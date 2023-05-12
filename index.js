@@ -22,7 +22,7 @@ for (const file of commandFiles) {
 
 client.on('ready', () => {
   console.log('The bot is online!');
-  
+
   // Register the slash command
   const data = {
     name: 'ping',
@@ -51,7 +51,7 @@ client.on('messageCreate', async (message) => {
   try {
     await message.channel.sendTyping();
     let prevMessages = await message.channel.messages.fetch({ limit: 15 });
-    prevMessages = prevMessages.array().reverse();
+    prevMessages = Array.from(prevMessages.values()).reverse();
 
     prevMessages.forEach((msg) => {
       if (message.content.startsWith('!')) return;
