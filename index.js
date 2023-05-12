@@ -2,13 +2,14 @@ const { Client, Intents, ApplicationCommandOptionType } = require('discord.js');
 const { Configuration, OpenAIApi } = require('openai');
 
 // Create a new instance of the Discord client
-const client = new Client({
+
+const client = new Client({ 
   intents: [
-    Intents.FLAGS.GUILD
-    Intents.FLAGS.MESSAGE
-    Intents.FLAGS.MESSAGE_CONTENTS
-    Intents.FLAGS.GUILD_MEMBERS    
-  ],
+    Intents.FLAGS.GUILDS,
+    Intents.FLAGS.GUILD_MESSAGES,
+    Intents.FLAGS.MESSAGE_CONTENT,
+    Intents.FLAGS.GUILD_MEMBERS
+  ]
 });
 
 // Create a new instance of the OpenAI configuration
