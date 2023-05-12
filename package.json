@@ -11,7 +11,7 @@
   "author": "Aehryn",
   "license": "ISC",
   "dependencies": {
-    "discord.js": "^14.7.1",
+    "discord.js": "^13.0.1",
     "dotenv": "^16.0.3",
     "openai": "^3.2.1"
   },
