@@ -28,7 +28,7 @@ jobs:
         GUILD_ID: ${{ secrets.GUILD_ID }}
         CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
       run: |
-        echo "$TOKEN" | docker login -u "$DOCKER_USERNAME" --password-stdin
+        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
         docker build -t my-discord-bot .
         docker tag my-discord-bot:latest aehryn/gpt3:latest
         docker push aehryn/gpt3:latest
