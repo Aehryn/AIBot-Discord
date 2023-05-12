@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Install Dependencies
 COPY package*.json ./
-RUN npm install discord.js@^13.0.1 openai dotenv
+RUN npm install
 
 # Bundle Source
 COPY . .
