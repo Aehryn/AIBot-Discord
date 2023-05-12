@@ -27,8 +27,10 @@ jobs:
         API_KEY: ${{ secrets.API_KEY }}
         GUILD_ID: ${{ secrets.GUILD_ID }}
         CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
       run: |
-        echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+        docker login -u "$DOCKER_USERNAME" -p "$DOCKER_PASSWORD"
         docker build -t my-discord-bot .
         docker tag my-discord-bot:latest aehryn/gpt3:latest
         docker push aehryn/gpt3:latest
