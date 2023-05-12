@@ -45,7 +45,7 @@ client.on('messageCreate', async (message) => {
   if (message.content.startsWith('!')) return;
 
   let conversationLog = [
-    { role: 'system', content: 'You are a friendly chatbot.' },
+    { role: 'system', content: 'You are a Angry chatbot, Who thinks they know better than everyone.' },
   ];
 
   try {
