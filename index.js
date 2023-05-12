@@ -1,145 +1,105 @@
-const { Client, Intents, ApplicationCommandOptionType } = require('discord.js');
+require('dotenv/config');
+const { Client, IntentsBitField, Collection } = require('discord.js');
 const { Configuration, OpenAIApi } = require('openai');
+const fs = require('fs');
 
-// Create a new instance of the Discord client
-
-const client = new Client({ 
+const client = new Client({
   intents: [
-    Intents.FLAGS.GUILDS,
-    Intents.FLAGS.GUILD_MESSAGES,
-    Intents.FLAGS.MESSAGE_CONTENT,
-    Intents.FLAGS.GUILD_MEMBERS
-  ]
+    IntentsBitField.Flags.Guilds,
+    IntentsBitField.Flags.GuildMessages,
+    IntentsBitField.Flags.MessageContent,
+  ],
 });
 
-// Create a new instance of the OpenAI configuration
-const configuration = new Configuration({
-  apiKey: process.env.API_KEY || '',
+client.commands = new Collection(); // Create a new collection for slash commands
+
+// Load slash commands
+const commandFiles = fs.readdirSync('./commands').filter((file) => file.endsWith('.js'));
+for (const file of commandFiles) {
+  const command = require(`./commands/${file}`);
+  client.commands.set(command.name, command);
+}
+
+client.on('ready', () => {
+  console.log('The bot is online!');
+  
+  // Register the slash command
+  const data = {
+    name: 'ping',
+    description: 'Ping command',
+  };
+  const guildId = '176230054777323520'; // Replace with your guild ID
+
+  client.guilds.cache.get(guildId)?.commands.create(data);
 });
+
+const configuration = new Configuration({
+  apiKey: process.env.API_KEY,
+});
+
 const openai = new OpenAIApi(configuration);
 
-// Create a set to store user IDs for enabling/disabling AI
-const aiEnabledUsers = new Set();
-
-// Maximum length for AI-generated messages
-const MAX_MESSAGE_LENGTH = 2000;
-
-// Event: Bot is ready and connected to Discord
-client.on('ready', async () => {
-  console.log('The bot is online!!!');
-
-  try {
-    // Get the guild ID from environment variables
-    const guildId = process.env.GUILD_ID || '';
-
-    // Register slash commands for the guild
-    const commands = await client.guilds.cache.get(guildId)?.commands.set([
-      {
-        name: 'noai',
-        description: 'Toggle AI responses for your messages',
-        options: [
-          {
-            name: 'toggle',
-            description: 'Toggle AI responses on or off',
-            type: ApplicationCommandOptionType.STRING,
-            required: true,
-            choices: [
-              {
-                name: 'on',
-                value: 'on',
-              },
-              {
-                name: 'off',
-                value: 'off',
-              },
-            ],
-          },
-        ],
-      },
-    ]);
-
-    console.log('Registered slash commands:');
-    console.log(commands);
-  } catch (error) {
-    console.error('Error registering slash commands:', error);
-  }
-});
-
-// Event: User interaction with slash commands
-client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isCommand()) return;
-
-  if (interaction.commandName === 'noai') {
-    // Get the toggle option from the interaction
-    const toggle = interaction.options.getString('toggle')?.toLowerCase();
-
-    if (toggle === 'on') {
-      // Disable AI for the user
-      aiEnabledUsers.delete(interaction.user.id);
-      await interaction.reply('AI is now disabled for your messages.');
-    } else if (toggle === 'off') {
-      // Enable AI for the user
-      aiEnabledUsers.add(interaction.user.id);
-      await interaction.reply('AI is now enabled for your messages.');
-    } else {
-      await interaction.reply('Invalid usage. Correct syntax: `/noai on` or `/noai off`');
-    }
-  }
-});
-
-// Event: User message in a designated channel
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
   if (message.channel.id !== process.env.CHANNEL_ID) return;
+  if (message.content.startsWith('!')) return;
 
-  if (aiEnabledUsers.has(message.author.id)) {
-    // Create a conversation log with a system message
-    let conversationLog = [{ role: 'system', content: 'You are a friendly chatbot.' }];
+  let conversationLog = [
+    { role: 'system', content: 'You are a friendly chatbot.' },
+  ];
 
-    try {
-      await message.channel.sendTyping();
+  try {
+    await message.channel.sendTyping();
+    let prevMessages = await message.channel.messages.fetch({ limit: 15 });
+    prevMessages = prevMessages.array().reverse();
 
-      // Retrieve previous messages in the channel
-      let prevMessages = await message.channel.messages.fetch({ limit: 15 });
-      prevMessages = prevMessages.array().reverse();
-
-      // Add user messages to the conversation log
-      prevMessages.forEach((msg) => {
-        if (msg.author.id !== client.user.id && !msg.author.bot) {
-          conversationLog.push({
-            role: 'user',
-            content: msg.content,
-          });
-        }
-      });
-
-      // Add the current message to the conversation log
-      conversationLog.push({
-        role: 'user',
-        content: message.content,
-      });
-
-      // Generate AI response using OpenAI API
-      const result = await openai.createChatCompletion({
-        model: 'gpt-3.5-turbo',
-        messages: conversationLog,
-      });
-
-      let text = result.data.choices[0].message.content;
-      if (text.length > MAX_MESSAGE_LENGTH) {
-        text = text.slice(0, MAX_MESSAGE_LENGTH) + '...';
+    prevMessages.forEach((msg) => {
+      if (message.content.startsWith('!')) return;
+      if (msg.author.id !== client.user.id && message.author.bot) return;
+      if (msg.author.id == client.user.id) {
+        conversationLog.push({
+          role: 'assistant',
+          content: msg.content,
+          name: msg.author.username
+            .replace(/\s+/g, '_')
+            .replace(/[^\w\s]/gi, ''),
+        });
       }
 
-      // Send the AI-generated response
-      await message.reply(text);
-    } catch (error) {
-      console.error('Error:', error);
-    }
+      if (msg.author.id == message.author.id) {
+        conversationLog.push({
+          role: 'user',
+          content: msg.content,
+          name: message.author.username
+            .replace(/\s+/g, '_')
+            .replace(/[^\w\s]/gi, ''),
+        });
+      }
+    });
+
+    const result = await openai
+      .createChatCompletion({
+        model: 'gpt-3.5-turbo',
+        messages: conversationLog,
+        // max_tokens: 256, // limit token usage
+      })
+      .catch((error) => {
+        console.log(`OPENAI ERR: ${error}`);
+      });
+    message.reply(result.data.choices[0].message);
+  } catch (error) {
+    console.log(`ERR: ${error}`);
   }
 });
 
-const token = process.env.TOKEN || '';
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isCommand()) return;
 
-// Log in to Discord using the bot token
-client.login(token);
+  const { commandName } = interaction;
 
+  if (commandName === 'ping') {
+    client.commands.get('ping').execute(interaction);
+  }
+});
+
+client.login(process.env.TOKEN);
