@@ -1,13 +1,14 @@
 FROM node:16.13.1-alpine3.12
 
-# Create app directory
+# Create APP Directory
+COPY . /app
 WORKDIR /app
 
-# Install app dependencies
+# Install Dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm install discord.js@^13.0.1 openai dotenv
 
-# Bundle app source
+# Bundle Source
 COPY . .
 
-CMD ["sh", "-c", "npm run start -- --token $TOKEN --api_key $API_KEY --guild_id $GUILD_ID --channel_id $CHANNEL_ID"]
+CMD ["npm", "run", "start"]
