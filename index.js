@@ -86,7 +86,7 @@ client.on('messageCreate', async (message) => {
       .catch((error) => {
         console.log(`OPENAI ERR: ${error}`);
       });
-    message.reply(result.data.choices[0].message);
+    message.reply("A witty response from a witty chatbot: " + result.data.choices[0].message);
   } catch (error) {
     console.log(`ERR: ${error}`);
   }
