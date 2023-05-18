@@ -22,6 +22,7 @@ for (const file of commandFiles) {
 
 client.on('ready', () => {
   console.log('The bot is online!');
+  console.log('Bot Content:', getBotContent()); // Display the value of BOT_CONTENT
 
   // Register the slash command
   const data = {
@@ -44,54 +45,6 @@ const getBotContent = () => {
   return process.env.BOT_CONTENT;
 };
 
-client.on('messageCreate', async (message) => {
-  if (message.author.bot) return;
-  if (message.channel.id !== process.env.CHANNEL_ID) return;
-  if (message.content.startsWith('!')) return;
-
-  try {
-    await message.channel.sendTyping();
-    let prevMessages = await message.channel.messages.fetch({ limit: 15 });
-    prevMessages = Array.from(prevMessages.values()).reverse();
-
-    let conversationLog = prevMessages.map((msg) => {
-      const role = msg.author.id === client.user.id ? 'assistant' : 'user';
-      const content = msg.content;
-      const name = msg.author.username.replace(/\s+/g, '_').replace(/[^\w\s]/gi, '');
-
-      return { role, content, name };
-    });
-
-    conversationLog.push({ role: 'user', content: message.content });
-
-    const result = await openai
-      .createChatCompletion({
-        model: 'gpt-3.5-turbo',
-        messages: [{ role: 'system', content: getBotContent() }, ...conversationLog],
-      })
-      .catch((error) => {
-        console.log(`OPENAI ERR: ${error}`);
-      });
-
-    const response = result.data.choices[0].message.content;
-    if (response) {
-      message.reply(response);
-    } else {
-      console.log('Empty response received from OpenAI API.');
-    }
-  } catch (error) {
-    console.log(`ERR: ${error}`);
-  }
-});
-
-client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isCommand()) return;
-
-  const { commandName } = interaction;
-
-  if (commandName === 'ping') {
-    client.commands.get('ping').execute(interaction);
-  }
-});
+// Rest of the code...
 
 client.login(process.env.TOKEN);
