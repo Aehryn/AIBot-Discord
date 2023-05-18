@@ -39,7 +39,10 @@ const configuration = new Configuration({
 
 const openai = new OpenAIApi(configuration);
 
-const botContent = process.env.BOT_CONTENT;
+const getBotContent = () => {
+  // Retrieve bot content from environment variable
+  return process.env.BOT_CONTENT;
+};
 
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
@@ -47,7 +50,7 @@ client.on('messageCreate', async (message) => {
   if (message.content.startsWith('!')) return;
 
   let conversationLog = [
-    { role: 'system', content: botContent },
+    { role: 'system', content: getBotContent() },
   ];
 
   try {
@@ -90,7 +93,7 @@ client.on('messageCreate', async (message) => {
         console.log(`OPENAI ERR: ${error}`);
       });
 
-    const response = result.data.choices[0].content;
+    const response = result.data.choices[0].message.content;
     if (response) {
       message.reply(response);
     } else {
