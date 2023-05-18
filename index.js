@@ -49,36 +49,17 @@ client.on('messageCreate', async (message) => {
   if (message.channel.id !== process.env.CHANNEL_ID) return;
   if (message.content.startsWith('!')) return;
 
-  let conversationLog = [
-    { role: 'system', content: getBotContent() },
-  ];
-
   try {
     await message.channel.sendTyping();
     let prevMessages = await message.channel.messages.fetch({ limit: 15 });
     prevMessages = Array.from(prevMessages.values()).reverse();
 
-    prevMessages.forEach((msg) => {
-      if (msg.author.id !== client.user.id && message.author.bot) return;
-      if (msg.author.id === client.user.id) {
-        conversationLog.push({
-          role: 'assistant',
-          content: msg.content,
-          name: msg.author.username
-            .replace(/\s+/g, '_')
-            .replace(/[^\w\s]/gi, ''),
-        });
-      }
+    let conversationLog = prevMessages.map((msg) => {
+      const role = msg.author.id === client.user.id ? 'assistant' : 'user';
+      const content = msg.content;
+      const name = msg.author.username.replace(/\s+/g, '_').replace(/[^\w\s]/gi, '');
 
-      if (msg.author.id === message.author.id) {
-        conversationLog.push({
-          role: 'user',
-          content: msg.content,
-          name: message.author.username
-            .replace(/\s+/g, '_')
-            .replace(/[^\w\s]/gi, ''),
-        });
-      }
+      return { role, content, name };
     });
 
     conversationLog.push({ role: 'user', content: message.content });
@@ -86,8 +67,7 @@ client.on('messageCreate', async (message) => {
     const result = await openai
       .createChatCompletion({
         model: 'gpt-3.5-turbo',
-        messages: conversationLog,
-        // max_tokens: 256, // limit token usage
+        messages: [{ role: 'system', content: getBotContent() }, ...conversationLog],
       })
       .catch((error) => {
         console.log(`OPENAI ERR: ${error}`);
