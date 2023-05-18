@@ -89,7 +89,13 @@ client.on('messageCreate', async (message) => {
       .catch((error) => {
         console.log(`OPENAI ERR: ${error}`);
       });
-    message.reply(result.data.choices[0].content);
+
+    const response = result.data.choices[0].content;
+    if (response) {
+      message.reply(response);
+    } else {
+      console.log('Empty response received from OpenAI API.');
+    }
   } catch (error) {
     console.log(`ERR: ${error}`);
   }
