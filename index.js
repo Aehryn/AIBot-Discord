@@ -89,7 +89,7 @@ client.on('messageCreate', async (message) => {
       .catch((error) => {
         console.log(`OPENAI ERR: ${error}`);
       });
-    message.reply(result.data.choices[0].message.content);
+    message.reply(result.data.choices[0].content);
   } catch (error) {
     console.log(`ERR: ${error}`);
   }
