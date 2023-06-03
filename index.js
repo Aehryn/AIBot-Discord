@@ -20,20 +20,6 @@ for (const file of commandFiles) {
   client.commands.set(command.name, command);
 }
 
-client.on('ready', () => {
-  console.log('The bot is online!');
-  console.log('Bot Content:', getBotContent()); // Display the value of BOT_CONTENT
-
-  // Register the slash command
-  const data = {
-    name: 'ping',
-    description: 'Ping command',
-  };
-  const guildId = '176230054777323520'; // Replace with your guild ID
-
-  client.guilds.cache.get(guildId)?.commands.create(data);
-});
-
 const configuration = new Configuration({
   apiKey: process.env.API_KEY,
 });
@@ -45,10 +31,19 @@ const getBotContent = () => {
   return process.env.BOT_CONTENT;
 };
 
-client.on('messageCreate', async (message) => {
-  if (message.author.bot) return;
-  if (message.channel.id !== process.env.CHANNEL_ID) return;
-  if (message.content.startsWith('!')) return;
+let lastInteractionTime = 0; // Variable to track the time of the last API interaction
+const interactionCooldown = 5000; // Cooldown time in milliseconds (adjust as needed)
+
+const rateLimitedReply = async (message) => {
+  const timeSinceLastInteraction = Date.now() - lastInteractionTime;
+  const remainingCooldown = interactionCooldown - timeSinceLastInteraction;
+
+  if (remainingCooldown > 0) {
+    // Cooldown still active, reply with a message indicating the remaining cooldown time
+    const remainingSeconds = Math.ceil(remainingCooldown / 1000);
+    message.reply(`Please wait ${remainingSeconds} seconds before sending another message.`);
+    return;
+  }
 
   try {
     await message.channel.sendTyping();
@@ -65,14 +60,10 @@ client.on('messageCreate', async (message) => {
 
     conversationLog.push({ role: 'user', content: message.content });
 
-    const result = await openai
-      .createChatCompletion({
-        model: 'gpt-3.5-turbo',
-        messages: [{ role: 'system', content: getBotContent() }, ...conversationLog],
-      })
-      .catch((error) => {
-        console.log(`OPENAI ERR: ${error}`);
-      });
+    const result = await openai.createChatCompletion({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'system', content: getBotContent() }, ...conversationLog],
+    });
 
     const response = result.data.choices[0].message.content;
     if (response) {
@@ -81,8 +72,32 @@ client.on('messageCreate', async (message) => {
       console.log('Empty response received from OpenAI API.');
     }
   } catch (error) {
-    console.log(`ERR: ${error}`);
+    console.log(`OPENAI ERR: ${error}`);
   }
+
+  lastInteractionTime = Date.now(); // Update the last interaction time
+};
+
+client.on('ready', () => {
+  console.log('The bot is online!');
+  console.log('Bot Content:', getBotContent()); // Display the value of BOT_CONTENT
+
+  // Register the slash command
+  const data = {
+    name: 'ping',
+    description: 'Ping command',
+  };
+  const guildId = '176230054777323520'; // Replace with your guild ID
+
+  client.guilds.cache.get(guildId)?.commands.create(data);
+});
+
+client.on('messageCreate', async (message) => {
+  if (message.author.bot) return;
+  if (message.channel.id !== process.env.CHANNEL_ID) return;
+  if (message.content.startsWith('!')) return;
+
+  rateLimitedReply(message);
 });
 
 client.on('interactionCreate', async (interaction) => {
